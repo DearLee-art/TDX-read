@@ -92,14 +92,18 @@ get_industry("300759")                               # '医疗研发外包'
 | Claude Code 等兼容同一约定的宿主 | `<该宿主的 skills 目录>/tdx-data-reader/` |
 
 ```bash
+# WorkBuddy
 git clone https://github.com/DearLee-art/TDX-read.git ~/.workbuddy/skills/tdx-data-reader
+
+# 其他宿主：把目标目录换成它的 skills 目录
+git clone https://github.com/DearLee-art/TDX-read.git "<宿主 skills 目录>/tdx-data-reader"
 ```
 
 **目录名必须与 `SKILL.md` 里 front matter 的 `name` 一致**（即 `tdx-data-reader`），否则加载不到。
 
 不装成 skill 也完全不影响使用 —— `SKILL.md` 只是写给 agent 的说明书，脚本本身与任何宿主无关。
 
-> `SKILL.md` 示例路径里的 `<用户名>` 指当前 Windows 账户名（Git Bash 用 `echo $USERNAME` 查看），照抄前替换成实际值。
+> `SKILL.md` 里的命令用相对路径 `scripts/xxx.py`（假设当前目录为本 skill 目录），装在任何宿主、任何位置都成立。只有 Python 解释器那一处带 `<用户名>` 占位符，指当前 Windows 账户名（`echo $USERNAME` 查看）。
 
 ## 复权口径
 

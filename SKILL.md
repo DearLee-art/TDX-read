@@ -11,12 +11,11 @@ description: 读取本机通达信（TDX）本地数据的通用工具集。当�
 
 ## 一、环境约定（重要，务必遵守）
 
-- **路径占位符**：下文示例中的 `<用户名>` 指当前 Windows 账户名（Git Bash 可用 `echo $USERNAME` 查看），使用前替换为实际值；路径一律用 Windows 盘符格式 `C:/Users/...`，不要用 `/c/...`。
 - **TDX 根目录**：默认 `C:\new_tdx64\new_tdx64`，可用环境变量 `TDX_ROOT` 覆盖（如其他盘符安装）。
-- **Python 运行环境**：任意 **Python 3.8+** 均可，无第三方 GUI/大数据依赖。  
-  仅有一个硬依赖：`pip install pytdx`（`tdx_fin.py` 下载财务包、`tdx_xdxr.py` 解析加密 `gbbq` 都要它）。  
+- **Python 运行环境**：任意 **Python 3.8+**，`python` 能跑即可，无 GUI/大数据依赖。  
+  硬依赖：`pip install pytdx`（`tdx_fin.py` 下载财务包、`tdx_xdxr.py` 解析加密 `gbbq` 都要它）。  
   可选：`pip install matplotlib`（只有画 PNG 的 `chart_stock.py` 需要；`chart.py` 出纯 SVG，不需要）。  
-  在 WorkBuddy 里跑时可用其托管 venv：`C:/Users/<用户名>/.workbuddy/binaries/python/envs/default/Scripts/python.exe`，其他环境用系统 python 即可。
+  若宿主自带的 `python` 没装 pytdx，换成装了它的解释器即可（WorkBuddy 里裸 `python` 通常没有，改用其托管 venv：`C:/Users/<用户名>/.workbuddy/binaries/python/envs/default/Scripts/python.exe`）。
 - **路径格式**：传给 python 的路径用 **Windows 盘符路径**（`C:/...` 或 `C:\...`），**不要用** Git Bash 的 `/c/...`（原生 Windows python 不识别）。
 - **网络**：仅 `tdx_fin.py`（财务数据，下载 `gpcw{YYYYMMDD}.zip`）与复权核对源（`--source tencent`，可选）  
   需要联网（在 WorkBuddy 里运行 Bash 时需加 `dangerouslyDisableSandbox=true`；其他环境忽略此提示）。**复权计算（默认 local）完全离线。**
@@ -26,15 +25,16 @@ description: 读取本机通达信（TDX）本地数据的通用工具集。当�
 
 ## 二、能力清单与调用示例
 
-脚本位于本 skill 的 `scripts/` 目录。推荐调用方式：用 python 直接运行脚本的**绝对路径**，并把工作目录（cwd）设在目标项目目录，输出即落到该目录的 `reports/`。
+脚本位于本 skill 的 `scripts/` 目录。**下方命令默认在本 skill 目录下执行**（相对路径 `scripts/xxx.py` 成立）；若在别处执行，把 `scripts/` 换成脚本的完整路径即可。  
+建议把工作目录（cwd）设在目标项目目录，输出即落到该目录的 `reports/`。
 
 ### 1) 财务数据（最常用）—— `tdx_fin.py`
 
 通用工具：输入「股票代码 + 任意字段（中文名/编号）」即可出 **累计 / 单季 / 同比 / 环比**，无需为每种数据重写。
 
 ```bash
-PY="C:/Users/<用户名>/.workbuddy/binaries/python/envs/default/Scripts/python.exe"
-SCR="C:/Users/<用户名>/.workbuddy/skills/tdx-data-reader/scripts/tdx_fin.py"
+PY="python"        # 或换成装了 pytdx 的解释器
+SCR="scripts/tdx_fin.py"
 
 # 近 6 个季度：应收账款 + 营业收入 + 净利润（控制台）
 "$PY" "$SCR" 300759 --fields 应收账款,营业收入,净利润 --recent 6
@@ -98,8 +98,8 @@ name = code_to_name("300759")        # -> '康龙化成'
 做收益/回测必须用复权价。本工具**依本机数据本地计算**前复权与后复权，离线、确定、前后自洽。
 
 ```bash
-PY="C:/Users/<用户名>/.workbuddy/binaries/python/envs/default/Scripts/python.exe"
-ADJ="C:/Users/<用户名>/.workbuddy/skills/tdx-data-reader/scripts/tdx_adjust.py"
+PY="python"        # 或换成装了 pytdx 的解释器
+ADJ="scripts/tdx_adjust.py"
 
 "$PY" "$ADJ" 600519 --mode qfq --days 300 --csv --html     # 前复权(默认)
 "$PY" "$ADJ" 300750 --mode hfq --days 300 --csv --html     # 后复权
@@ -135,8 +135,8 @@ ev = get_events("600519")   # -> [dict(date, div, bonus, rights, rprice), ...]
 ```
 
 ```bash
-"$PY" "C:/Users/<用户名>/.workbuddy/skills/tdx-data-reader/scripts/tdx_xdxr.py" 600519   # 打印事件
-"$PY" "C:/Users/<用户名>/.workbuddy/skills/tdx-data-reader/scripts/tdx_xdxr.py" --rebuild # 强制重建缓存
+"$PY" "scripts/tdx_xdxr.py" 600519   # 打印事件
+"$PY" "scripts/tdx_xdxr.py" --rebuild # 强制重建缓存
 ```
 
 ### 8) 流通股本（换手率分母）—— `tdx_float.py`
@@ -145,7 +145,7 @@ ev = get_events("600519")   # -> [dict(date, div, bonus, rights, rprice), ...]
 关键字段：`GPDM`(代码) / `ZGB`(总股本,万股) / `LTAG`(流通A股,万股)；单位**万股**，已用 600519(茅台)/000001(平安) 反查验证。
 
 ```bash
-"$PY" "C:/Users/<用户名>/.workbuddy/skills/tdx-data-reader/scripts/tdx_float.py" 600513
+"$PY" "scripts/tdx_float.py" 600513
 # 输出: 600513: 流通股本=2.8546亿股  总股本=2.8546亿股
 ```
 
@@ -158,7 +158,7 @@ ev = get_events("600519")   # -> [dict(date, div, bonus, rights, rprice), ...]
 （`base.dbf` 在本进程内只解析一次，批量选股可直接用 `tdx_float.get_shares_map()` 查表。）
 
 ```bash
-"$PY" "C:/Users/<用户名>/.workbuddy/skills/tdx-data-reader/scripts/tdx_indicators.py" 600513 --days 250 --out "reports/600513_indicators_250.csv"
+"$PY" "scripts/tdx_indicators.py" 600513 --days 250 --out "reports/600513_indicators_250.csv"
 ```
 
 输出列：`date, close, vol_hand, amount_wan, turnover_pct, MA5, MA10, MA20, MA60, MA120,

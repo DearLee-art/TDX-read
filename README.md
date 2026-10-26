@@ -84,22 +84,15 @@ get_industry("300759")                               # '医疗研发外包'
 
 ## 作为 AI skill 安装（可选）
 
-`SKILL.md` 遵循 Agent Skills 约定（YAML front matter 声明 `name`/`description`，正文是使用手册）。想让它被 agent 自动加载时，放到宿主的 skills 目录：
-
-| 宿主 | 放置位置 |
-|---|---|
-| WorkBuddy | `~/.workbuddy/skills/tdx-data-reader/` |
-| Claude Code 等兼容同一约定的宿主 | `<该宿主的 skills 目录>/tdx-data-reader/` |
+`SKILL.md` 遵循 Agent Skills 约定（YAML front matter 声明 `name`/`description`，正文是使用手册）。想让它被 agent 自动加载时，把整个目录放进宿主的 skills 目录即可：
 
 ```bash
-# WorkBuddy
-git clone https://github.com/DearLee-art/TDX-read.git ~/.workbuddy/skills/tdx-data-reader
-
-# 其他宿主：把目标目录换成它的 skills 目录
-git clone https://github.com/DearLee-art/TDX-read.git "<宿主 skills 目录>/tdx-data-reader"
+git clone https://github.com/DearLee-art/TDX-read.git "<skills 目录>/tdx-data-reader"
 ```
 
-**目录名必须与 `SKILL.md` 里 front matter 的 `name` 一致**（即 `tdx-data-reader`），否则加载不到。
+**目录名必须是 `tdx-data-reader`**（与 front matter 的 `name` 一致），否则加载不到。
+
+<sub>`<skills 目录>` 的常见位置：WorkBuddy 是 `~/.workbuddy/skills/`，Claude Code 是 `~/.claude/skills/`，其他宿主按各自文档。Windows 下 `~` 即 `$env:USERPROFILE`。</sub>
 
 不装成 skill 也完全不影响使用 —— `SKILL.md` 只是写给 agent 的说明书，脚本本身与任何宿主无关。
 

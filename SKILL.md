@@ -1,30 +1,32 @@
 ---
 name: tdx-data-reader
-description: 读取本机通达信（TDX）本地数据的通用工具集。当用户需要从通达信读取「K线价量、前复权/后复权行情、股票所属行业、财务数据（营收/净利润/应收账款/增幅等任意584字段）、自定义板块、流通股本、技术指标、代码↔名称、生成K线图」时使用。覆盖场景关键词：通达信、TDX、K线、日线、股价、成交量、前复权、后复权、复权、除权除息、回测、所属行业、财务数据、营业收入、净利润、应收账款、每股收益、毛利率、营收增长率、板块、股票名称、画K线图。该 skill 为纯数据读取层，不依赖任何具体分析策略，可在任意 workspace（空间）直接加载即用。
+description: 读取本机通达信（TDX）本地数据的通用工具集。当用户需要从通达信读取「K线价量、前复权/后复权行情、股票所属行业、财务数据（营收/净利润/应收账款/增幅等任意584字段）、自定义板块、流通股本、技术指标、代码↔名称、生成K线图」时使用。覆盖场景关键词：通达信、TDX、K线、日线、股价、成交量、前复权、后复权、复权、除权除息、回测、所属行业、财务数据、营业收入、净利润、应收账款、每股收益、毛利率、营收增长率、板块、股票名称、画K线图。该 skill 为纯数据读取层，不依赖任何具体分析策略，可在任意项目目录直接加载或独立调用。
 ---
 
 # 通达信本地数据读取器（tdx-data-reader）
 
-从本机安装的通达信读取行情、行业、财务、板块等数据。**与具体选股/判读策略无关**，可在任意 workspace 复用。所有数据均来自固定目录 `TDX_ROOT`（默认 `C:\new_tdx64\new_tdx64`），脚本本身不依赖调用方项目。
+> **这是一套纯 Python 工具集**：`scripts/` 下的脚本可以直接在命令行运行或 `import` 进任何项目，不需要装成 skill。`SKILL.md`（本文件）只是给 AI agent 看的用法说明，装不装都不影响脚本可用性。依赖只有 `pytdx`，数据全部来自本机通达信目录。
+
+从本机安装的通达信读取行情、行业、财务、板块等数据。**与具体选股/判读策略无关**，可脱离任何 AI 工具独立使用，也可作为 skill 被 agent 加载。所有数据均来自固定目录 `TDX_ROOT`（默认 `C:\new_tdx64\new_tdx64`），脚本本身不依赖调用方项目。
 
 ## 一、环境约定（重要，务必遵守）
 
 - **路径占位符**：下文示例中的 `<用户名>` 指当前 Windows 账户名（Git Bash 可用 `echo $USERNAME` 查看），使用前替换为实际值；路径一律用 Windows 盘符格式 `C:/Users/...`，不要用 `/c/...`。
 - **TDX 根目录**：默认 `C:\new_tdx64\new_tdx64`，可用环境变量 `TDX_ROOT` 覆盖（如其他盘符安装）。
-- **Python 运行环境**：使用托管 venv  
-  `C:/Users/<用户名>/.workbuddy/binaries/python/envs/default/Scripts/python.exe`  
-  该 venv 需安装 `pytdx`（财务工具 `tdx_fin.py` 与除权除息解析 `tdx_xdxr.py` 首建缓存时依赖）：  
-  `C:/Users/<用户名>/.workbuddy/binaries/python/envs/default/Scripts/pip install pytdx`
+- **Python 运行环境**：任意 **Python 3.8+** 均可，无第三方 GUI/大数据依赖。  
+  仅有一个硬依赖：`pip install pytdx`（`tdx_fin.py` 下载财务包、`tdx_xdxr.py` 解析加密 `gbbq` 都要它）。  
+  可选：`pip install matplotlib`（只有画 PNG 的 `chart_stock.py` 需要；`chart.py` 出纯 SVG，不需要）。  
+  在 WorkBuddy 里跑时可用其托管 venv：`C:/Users/<用户名>/.workbuddy/binaries/python/envs/default/Scripts/python.exe`，其他环境用系统 python 即可。
 - **路径格式**：传给 python 的路径用 **Windows 盘符路径**（`C:/...` 或 `C:\...`），**不要用** Git Bash 的 `/c/...`（原生 Windows python 不识别）。
 - **网络**：仅 `tdx_fin.py`（财务数据，下载 `gpcw{YYYYMMDD}.zip`）与复权核对源（`--source tencent`，可选）  
-  需要联网，运行 Bash 时加 `dangerouslyDisableSandbox=true`。**复权计算（默认 local）完全离线。**
+  需要联网（在 WorkBuddy 里运行 Bash 时需加 `dangerouslyDisableSandbox=true`；其他环境忽略此提示）。**复权计算（默认 local）完全离线。**
 - **除权除息缓存**：复权事件来自本机 `T0002/hq_cache/gbbq`，首次解析较慢（约 1 分钟）并缓存到  
   `scripts/cw_cache/gbbq_xdxr.json`，之后秒读；gbbq 更新时按 (mtime,size) 自动重建。
-- **输出目录**：脚本默认把 HTML/PNG 输出到**当前工作目录**下的 `reports/`（即调用时所在的 workspace），可用 `--out DIR` 覆盖。
+- **输出目录**：脚本默认把 HTML/PNG 输出到**当前工作目录**下的 `reports/`（即调用时所在的目录），可用 `--out DIR` 覆盖。
 
 ## 二、能力清单与调用示例
 
-脚本位于本 skill 的 `scripts/` 目录。推荐调用方式：用 venv 的 `python.exe` 直接运行脚本的**绝对路径**，并把工作目录（cwd）设在目标 workspace，输出即落到该 workspace 的 `reports/`。
+脚本位于本 skill 的 `scripts/` 目录。推荐调用方式：用 python 直接运行脚本的**绝对路径**，并把工作目录（cwd）设在目标项目目录，输出即落到该目录的 `reports/`。
 
 ### 1) 财务数据（最常用）—— `tdx_fin.py`
 
@@ -37,7 +39,7 @@ SCR="C:/Users/<用户名>/.workbuddy/skills/tdx-data-reader/scripts/tdx_fin.py"
 # 近 6 个季度：应收账款 + 营业收入 + 净利润（控制台）
 "$PY" "$SCR" 300759 --fields 应收账款,营业收入,净利润 --recent 6
 
-# 生成 HTML 报告（落到当前 workspace 的 reports/）
+# 生成 HTML 报告（落到当前目录的 reports/）
 "$PY" "$SCR" 300759 --fields 应收账款,营业收入,净利润,经营现金流 --recent 6 --html
 
 # 显式指定报告期 + 换股票（如贵州茅台）
@@ -86,7 +88,7 @@ name = code_to_name("300759")        # -> '康龙化成'
 涨红跌绿 + MA10/30/60 + 成交量；若同目录存在 `cyf_screen.evaluate` 会叠加判读关键位，缺失则只画纯 K 线。
 
 ```bash
-"$PY" "$SCR" 300759 160 --out "C:/path/to/workspace/reports"
+"$PY" "$SCR" 300759 160 --out "C:/path/to/project/reports"
 # 输出 kline_300759.png
 ```
 
@@ -200,9 +202,9 @@ turnover_20avg_pct, limitup_60_count, newhigh_60_break`
 
 ## 四、与其他空间的协作
 
-1. 在新 workspace 对话中提到「读取 300759 财务 / 画 K线 / 取前复权或后复权」→ 本 skill 被加载；
-2. 按上面示例运行脚本，读的是**本机通达信数据**，输出落到该 workspace 的 `reports/`；
-3. 验证：在任意 workspace 跑 `tdx_fin.py 300759 --fields 营收,净利 --recent 6`，结果与本机一致；  
+1. 在任意项目目录中（对话里提到「读取 300759 财务 / 画 K线 / 取前复权或后复权」）→ 若已装成 skill 则被自动加载，否则直接命令行调用脚本；
+2. 按上面示例运行脚本，读的是**本机通达信数据**，输出落到当前目录的 `reports/`；
+3. 验证：在任意目录跑 `tdx_fin.py 300759 --fields 营收,净利 --recent 6`，结果与本机一致；  
    复权验证：`tdx_adjust.py 600519 --mode qfq --days 30` 的最末日因子应 =1.0。
 
 > 维护提示：本 skill 可随时增删脚本或扩充字段别名；修改后同步更新本文件「能力清单 / 示例」即可，无需重新安装。  

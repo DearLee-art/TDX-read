@@ -1,0 +1,12 @@
+# 运行时缓存：首次运行自动下载 / 重建，不入库
+scripts/cw_cache/gpcw*.zip
+scripts/cw_cache/gbbq_xdxr.json
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+
+# 输出产物
+reports/
+*.log
